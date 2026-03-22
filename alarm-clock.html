@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alarm Clock</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #f0f0f0; min-height: 100vh;
+    display: flex; justify-content: center;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    padding: 3rem 1rem;
+  }
+  .container {
+    background: #fff; border-radius: 20px;
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    padding: 2rem; width: 100%; max-width: 400px;
+    height: fit-content;
+  }
+
+  .clock-display { text-align: center; margin-bottom: 1.5rem; }
+  #clock {
+    font-size: 52px; font-weight: 500; color: #111;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 2px; line-height: 1;
+  }
+  #date-display { font-size: 14px; color: #888; margin-top: 6px; }
+
+  .set-card {
+    background: #fff; border: 1px solid #e8e8e8;
+    border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem;
+  }
+  .set-card-title { font-size: 13px; color: #888; font-weight: 500; margin-bottom: 12px; }
+  .set-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+
+  .field { flex: 1; min-width: 110px; }
+  .field label { display: block; font-size: 12px; color: #888; margin-bottom: 4px; }
+  .field input {
+    width: 100%; padding: 9px 10px; font-size: 15px;
+    border-radius: 8px; border: 1px solid #ccc;
+    background: #fff; color: #111; font-family: inherit; outline: none;
+  }
+  .field input:focus { border-color: #1a56db; box-shadow: 0 0 0 3px rgba(26,86,219,0.1); }
+  .field.label-field { min-width: 130px; }
+
+  .btn-add {
+    padding: 9px 18px; font-size: 15px; font-weight: 500;
+    border-radius: 8px; border: 1px solid #b3c8fa;
+    background: #e8f0fe; color: #1a56db;
+    cursor: pointer; font-family: inherit; white-space: nowrap;
+  }
+  .btn-add:hover { background: #d4e3fc; }
+  .btn-add:active { transform: scale(0.97); }
+
+  .alarms-title { font-size: 13px; color: #888; font-weight: 500; margin-bottom: 8px; }
+  #no-alarms { text-align: center; padding: 1.5rem 0; color: #bbb; font-size: 14px; }
+
+  .alarm-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px; background: #fff;
+    border: 1px solid #e8e8e8; border-radius: 8px; margin-bottom: 8px;
+  }
+  .alarm-item:hover .del-btn { opacity: 1; }
+  .alarm-item.firing { border-color: #f59e0b; background: #fffbeb; }
+
+  .alarm-time-txt { font-size: 22px; font-weight: 500; font-variant-numeric: tabular-nums; }
+  .alarm-time-txt.on  { color: #111; }
+  .alarm-time-txt.off { color: #bbb; }
+  .alarm-lbl { font-size: 14px; color: #888; }
+  .alarm-cd  { font-size: 12px; color: #bbb; text-align: right; flex: 1; }
+
+  .toggle-switch { position: relative; width: 42px; height: 24px; flex-shrink: 0; }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; }
+  .toggle-track {
+    position: absolute; inset: 0; border-radius: 12px;
+    background: #e0e0e0; border: 1px solid #ccc;
+    cursor: pointer; transition: background 0.2s;
+  }
+  .toggle-switch input:checked + .toggle-track { background: #e8f0fe; border-color: #b3c8fa; }
+  .toggle-thumb {
+    position: absolute; top: 3px; left: 3px;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: #fff; transition: transform 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2); pointer-events: none;
+  }
+  .toggle-switch input:checked ~ .toggle-thumb { transform: translateX(18px); }
+
+  .del-btn {
+    opacity: 0; background: none; border: none; cursor: pointer;
+    color: #e74c3c; font-size: 20px; padding: 0 2px;
+    line-height: 1; transition: opacity 0.15s; flex-shrink: 0;
+    font-family: inherit;
+  }
+
+  #ringing-banner {
+    display: none; background: #fffbeb;
+    border: 1px solid #f59e0b; border-radius: 12px;
+    padding: 1.25rem; margin-top: 1rem; text-align: center;
+  }
+  #ringing-icon  { font-size: 28px; margin-bottom: 4px; }
+  #ringing-label { font-size: 16px; font-weight: 500; color: #92400e; margin-bottom: 12px; }
+  .btn-dismiss {
+    padding: 10px 28px; font-size: 15px; font-weight: 500;
+    border-radius: 8px; border: 1px solid #f59e0b;
+    background: #fff; color: #92400e;
+    cursor: pointer; font-family: inherit;
+  }
+  .btn-dismiss:hover { background: #fef3c7; }
+  .btn-dismiss:active { transform: scale(0.97); }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="clock-display">
+    <div id="clock">00:00:00</div>
+    <div id="date-display"></div>
+  </div>
+
+  <div class="set-card">
+    <div class="set-card-title">Set alarm</div>
+    <div class="set-row">
+      <div class="field">
+        <label for="alarm-time">Time</label>
+        <input type="time" id="alarm-time" />
+      </div>
+      <div class="field label-field">
+        <label for="alarm-label">Label (optional)</label>
+        <input type="text" id="alarm-label" placeholder="e.g. Wake up" />
+      </div>
+      <button class="btn-add" onclick="addAlarm()">+ Add</button>
+    </div>
+  </div>
+
+  <div class="alarms-title">Alarms</div>
+  <div id="alarms-list"></div>
+  <div id="no-alarms">No alarms set yet.</div>
+
+  <div id="ringing-banner">
+    <div id="ringing-icon">⏰</div>
+    <div id="ringing-label"></div>
+    <button class="btn-dismiss" onclick="dismissAlarm()">Dismiss</button>
+  </div>
+
+</div>
+
+<script>
+  let alarms = [], ringInterval = null, activeRingId = null, audioCtx = null;
+
+  function getAudioCtx() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return audioCtx;
+  }
+
+  function beep() {
+    try {
+      const ctx = getAudioCtx();
+      [880, 1100, 880, 1100].forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.frequency.value = freq; osc.type = 'sine';
+        gain.gain.setValueAtTime(0.3, ctx.currentTime + i * 0.25);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.25 + 0.2);
+        osc.start(ctx.currentTime + i * 0.25);
+        osc.stop(ctx.currentTime + i * 0.25 + 0.25);
+      });
+    } catch(e) {}
+  }
+
+  function tickClock() {
+    const now = new Date();
+    const h = String(now.getHours()).padStart(2,'0');
+    const m = String(now.getMinutes()).padStart(2,'0');
+    const s = String(now.getSeconds()).padStart(2,'0');
+    document.getElementById('clock').textContent = `${h}:${m}:${s}`;
+    document.getElementById('date-display').textContent =
+      now.toLocaleDateString(undefined, { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+
+    alarms.forEach(a => {
+      if (!a.enabled || a.fired) return;
+      if (a.time === `${h}:${m}` && s === '00') triggerAlarm(a);
+    });
+    renderAlarms();
+  }
+
+  function triggerAlarm(alarm) {
+    alarm.fired = true; activeRingId = alarm.id;
+    document.getElementById('ringing-label').textContent =
+      alarm.label ? `${alarm.label} — ${alarm.time}` : `Alarm: ${alarm.time}`;
+    document.getElementById('ringing-banner').style.display = 'block';
+    ringInterval = setInterval(beep, 1100);
+    beep();
+  }
+
+  function dismissAlarm() {
+    clearInterval(ringInterval);
+    document.getElementById('ringing-banner').style.display = 'none';
+    const alarm = alarms.find(a => a.id === activeRingId);
+    if (alarm) { alarm.fired = false; alarm.enabled = false; }
+    activeRingId = null;
+    renderAlarms();
+  }
+
+  function addAlarm() {
+    const time  = document.getElementById('alarm-time').value;
+    const label = document.getElementById('alarm-label').value.trim();
+    if (!time) { alert('Please select a time for the alarm.'); return; }
+    alarms.push({ id: Date.now(), time, label, enabled: true, fired: false });
+    alarms.sort((a, b) => a.time.localeCompare(b.time));
+    document.getElementById('alarm-time').value  = '';
+    document.getElementById('alarm-label').value = '';
+    renderAlarms();
+  }
+
+  function toggleAlarm(id) {
+    const a = alarms.find(a => a.id === id);
+    if (a) { a.enabled = !a.enabled; a.fired = false; }
+    renderAlarms();
+  }
+
+  function deleteAlarm(id) {
+    alarms = alarms.filter(a => a.id !== id);
+    renderAlarms();
+  }
+
+  function countdown(time) {
+    const now = new Date();
+    const [ah, am] = time.split(':').map(Number);
+    let diff = (ah * 60 + am) - (now.getHours() * 60 + now.getMinutes());
+    if (diff <= 0) diff += 1440;
+    const h = Math.floor(diff / 60), m = diff % 60;
+    if (h === 0) return `in ${m}m`;
+    if (m === 0) return `in ${h}h`;
+    return `in ${h}h ${m}m`;
+  }
+
+  function renderAlarms() {
+    const list = document.getElementById('alarms-list');
+    const none = document.getElementById('no-alarms');
+    if (alarms.length === 0) { list.innerHTML = ''; none.style.display = 'block'; return; }
+    none.style.display = 'none';
+    list.innerHTML = alarms.map(a => `
+      <div class="alarm-item${a.id === activeRingId ? ' firing' : ''}">
+        <div>
+          <div class="alarm-time-txt ${a.enabled ? 'on' : 'off'}">${a.time}</div>
+          <div class="alarm-lbl">${a.label || '<span style="color:#bbb">No label</span>'}</div>
+        </div>
+        <div class="alarm-cd">${a.enabled ? countdown(a.time) : 'off'}</div>
+        <label class="toggle-switch">
+          <input type="checkbox" ${a.enabled ? 'checked' : ''} onchange="toggleAlarm(${a.id})" />
+          <div class="toggle-track"></div>
+          <div class="toggle-thumb"></div>
+        </label>
+        <button class="del-btn" onclick="deleteAlarm(${a.id})">×</button>
+      </div>
+    `).join('');
+  }
+
+  setInterval(tickClock, 1000);
+  tickClock();
+  renderAlarms();
+</script>
+</body>
+</html>
